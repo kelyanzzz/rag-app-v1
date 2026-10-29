@@ -1,0 +1,20 @@
+[
+  {"question": "How long is a password recovery link valid?", "answer": "20 minutes", "source": "nimbus_account_security.md", "evidence": "recovery link valid for 20 minutes", "type": "easy"},
+  {"question": "How do I get back into my account?", "answer": "Use the credential recovery flow from 'Trouble signing in'", "source": "nimbus_account_security.md", "evidence": "credential recovery flow", "type": "hard: vocabulary mismatch"},
+  {"question": "What does NMB-409-BUCKET_NOT_EMPTY mean?", "answer": "The bucket still has objects or incomplete multipart uploads", "source": "nimbus_api_errors.md", "evidence": "zero incomplete multipart uploads", "type": "hard: error code"},
+  {"question": "I got NMB-429, how long should I wait?", "answer": "Use the Retry-After header, exponential backoff from 2 to 64 seconds", "source": "nimbus_api_errors.md", "evidence": "Retry-After", "type": "hard: error code"},
+  {"question": "What is the maximum size of a single PUT upload?", "answer": "5 GB", "source": "nimbus_api_errors.md", "evidence": "accepts objects up to 5 GB", "type": "easy"},
+  {"question": "Why are SMS codes not supported for 2FA?", "answer": "Because of SIM swap attacks, since March 2024", "source": "nimbus_account_security.md", "evidence": "SIM swap", "type": "easy"},
+  {"question": "Can I get a refund on a monthly subscription?", "answer": "No, monthly subscriptions are never refunded", "source": "nimbus_billing.md", "evidence": "Monthly subscriptions are never refunded", "type": "easy"},
+  {"question": "How much does the Team plan cost for 5 users?", "answer": "60 euros per month (12 x 5)", "source": "nimbus_billing.md", "evidence": "12 euros per user per month", "type": "hard: needs calculation"},
+  {"question": "What happens after the third failed payment?", "answer": "The account becomes read-only", "source": "nimbus_billing.md", "evidence": "switched to read-only", "type": "easy"},
+  {"question": "Can I deploy to production on a Friday afternoon?", "answer": "No, no deployments on Fridays", "source": "nimbus_operations.md", "evidence": "No deployments on Fridays", "type": "easy"},
+  {"question": "Who is paged if the primary on-call engineer does not answer?", "answer": "The secondary after 5 minutes, then the engineering manager after 15", "source": "nimbus_operations.md", "evidence": "escalates to the secondary", "type": "easy"},
+  {"question": "Which region receives a deployment first?", "answer": "eu-central (Frankfurt)", "source": "nimbus_operations.md", "evidence": "goes first to `eu-central`", "type": "easy"},
+  {"question": "When was API v1 shut down?", "answer": "June 30, 2024", "source": "nimbus_company_history.txt", "evidence": "shut down on June 30, 2024", "type": "easy"},
+  {"question": "What is the name of the company mascot?", "answer": "Cumulus, a grey cat", "source": "nimbus_company_history.txt", "evidence": "Cumulus", "type": "needle"},
+  {"question": "Where was the company founded and where is it now?", "answer": "Founded in Lyon, headquarters moved to Paris in 2021", "source": "nimbus_company_history.txt", "evidence": "headquarters from Lyon to Paris", "type": "hard: two places"},
+  {"question": "Does Nimbus have a region in Tokyo?", "answer": "Not in the corpus (regions: Paris, Frankfurt, Virginia)", "source": null, "evidence": null, "type": "unanswerable"},
+  {"question": "What is the CEO's salary?", "answer": "Not in the corpus", "source": null, "evidence": null, "type": "unanswerable"},
+  {"question": "How do I configure Kubernetes autoscaling?", "answer": "Not in the corpus", "source": null, "evidence": null, "type": "unanswerable"}
+]
