@@ -1,0 +1,13 @@
+Nimbus company history
+
+Nimbus was founded in 2017 in Lyon by Claire Fontenay and Mehdi Ouardi, two former engineers from a French telecom operator. The first product was a backup tool for small accounting firms, called Nimbus Vault.
+
+In 2019 the company pivoted to object storage after a large customer asked for an API compatible with existing storage tools. The Nimbus Storage API v1 was released in October 2019.
+
+The company moved its headquarters from Lyon to Paris in 2021, after a Series A round of 14 million euros led by a Paris venture fund. The Lyon office was kept for the support team.
+
+The API v2 was released in 2021 and introduced multipart uploads. The API v3, released in 2023, introduced scoped tokens and the search endpoint. The API v1 was shut down on June 30, 2024.
+
+In 2024 Nimbus opened the us-east region, its first region outside Europe. The same year, it reached 3,000 paying customers and 120 employees.
+
+The internal mascot of the company is a grey cat named Cumulus, who appears on the 404 page of the web console.
