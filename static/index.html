@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG app V1</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1d2330; }
+  header { background: #1d2330; color: #fff; padding: 12px 20px; }
+  main { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 16px; max-width: 1200px; margin: auto; }
+  section { background: #fff; border: 1px solid #dde1e8; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  .doc { display: flex; align-items: center; gap: 6px; font-size: 14px; margin: 4px 0; }
+  .doc span { flex: 1; word-break: break-all; }
+  label.setting { display: flex; justify-content: space-between; font-size: 14px; margin: 6px 0; }
+  input[type=number] { width: 80px; }
+  textarea { width: 100%; box-sizing: border-box; height: 70px; font: inherit; }
+  button { cursor: pointer; }
+  .status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #e8ecf3; }
+  .status.ok { background: #d8f3e0; } .status.warn { background: #fdecc8; } .status.err { background: #fbd5d5; }
+  .ref { border-left: 3px solid #4a6cf7; padding: 4px 10px; margin: 6px 0; cursor: pointer; font-size: 14px; }
+  .ref:hover { background: #f0f3ff; }
+  pre { white-space: pre-wrap; background: #f6f7f9; padding: 10px; border-radius: 6px; font-size: 13px; }
+  .muted { color: #6b7280; font-size: 13px; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header><strong>RAG app V1</strong> <span class="muted" style="color:#aab">naive retrieval-augmented generation</span></header>
+<main>
+  <div>
+    <section>
+      <h2>Documents</h2>
+      <div id="docs"></div>
+      <p><input type="file" id="file" accept=".md,.txt"> <button id="upload">Upload</button></p>
+      <p class="muted">Checked documents are searched when you ask.</p>
+    </section>
+    <section>
+      <h2>Settings</h2>
+      <label class="setting">Chunk size (chars) <input type="number" id="chunk_size"></label>
+      <label class="setting">Overlap (%) <input type="number" id="overlap_percent"></label>
+      <label class="setting">Top-k <input type="number" id="top_k"></label>
+      <button id="save">Save</button>
+      <p class="muted">Changing chunk size or overlap re-indexes all documents.</p>
+    </section>
+  </div>
+  <div>
+    <section>
+      <h2>Ask a question</h2>
+      <textarea id="question" placeholder="e.g. How long is a recovery link valid?"></textarea>
+      <button id="ask">Ask</button>
+    </section>
+    <section id="result" hidden>
+      <h2>Answer <span id="status" class="status"></span></h2>
+      <p id="answer"></p>
+      <p id="message" class="muted"></p>
+      <h2>References</h2>
+      <div id="refs"></div>
+      <details><summary class="muted">All retrieved chunks</summary><div id="retrieved"></div></details>
+    </section>
+    <section id="chunkview" hidden>
+      <h2 id="chunktitle"></h2>
+      <pre id="chunktext"></pre>
+    </section>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const STATUS = {
+  ok: ["Grounded answer", "ok"],
+  not_in_documents: ["Not in the documents", "warn"],
+  unsupported_answer: ["Answer without valid reference", "warn"],
+  no_relevant_context: ["Nothing relevant retrieved", "warn"],
+  invalid_llm_output: ["Invalid LLM output", "err"],
+  llm_error: ["LLM unavailable", "err"],
+};
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, opts);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.detail ? JSON.stringify(body.detail) : r.statusText);
+  return body;
+}
+
+async function loadDocs() {
+  const docs = await api("/api/documents");
+  $("docs").innerHTML = "";
+  for (const d of docs) {
+    const row = document.createElement("div");
+    row.className = "doc";
+    row.innerHTML = `<input type="checkbox" checked><span></span><button title="Delete">✕</button>`;
+    row.querySelector("input").value = d;
+    row.querySelector("span").textContent = d;
+    row.querySelector("button").onclick = async () => {
+      if (!confirm(`Delete ${d}?`)) return;
+      await api(`/api/documents/${encodeURIComponent(d)}`, { method: "DELETE" });
+      loadDocs();
+    };
+    $("docs").appendChild(row);
+  }
+}
+
+async function loadSettings() {
+  const s = await api("/api/settings");
+  for (const k of ["chunk_size", "overlap_percent", "top_k"]) $(k).value = s[k];
+}
+
+$("save").onclick = async () => {
+  $("save").disabled = true;
+  try {
+    const body = {};
+    for (const k of ["chunk_size", "overlap_percent", "top_k"]) body[k] = Number($(k).value);
+    await api("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    alert("Settings saved.");
+  } catch (e) { alert("Invalid settings: " + e.message); }
+  $("save").disabled = false;
+};
+
+$("upload").onclick = async () => {
+  const f = $("file").files[0];
+  if (!f) return;
+  const fd = new FormData(); fd.append("file", f);
+  try { await api("/api/documents", { method: "POST", body: fd }); loadDocs(); }
+  catch (e) { alert("Upload failed: " + e.message); }
+};
+
+function chunkRow(c, container) {
+  const div = document.createElement("div");
+  div.className = "ref";
+  div.textContent = `${c.source} · chunk ${c.chunk_index} · similarity ${c.score}`;
+  div.onclick = () => showChunk(c.id);
+  container.appendChild(div);
+}
+
+async function showChunk(id) {
+  const c = await api(`/api/chunks/${encodeURIComponent(id)}`);
+  $("chunkview").hidden = false;
+  $("chunktitle").textContent = `${c.source} · chunk ${c.chunk_index}`;
+  $("chunktext").textContent = c.text;
+  $("chunkview").scrollIntoView({ behavior: "smooth" });
+}
+
+$("ask").onclick = async () => {
+  const documents = [...document.querySelectorAll("#docs input:checked")].map((i) => i.value);
+  $("ask").disabled = true; $("ask").textContent = "Thinking...";
+  try {
+    const r = await api("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: $("question").value, documents }) });
+    const [label, cls] = STATUS[r.status] || [r.status, ""];
+    $("result").hidden = false;
+    $("status").textContent = label; $("status").className = "status " + cls;
+    $("answer").textContent = r.answer || "";
+    $("message").textContent = r.message || (r.invented_citations?.length ? `Ignored citations not in retrieved chunks: ${r.invented_citations.join(", ")}` : "");
+    $("refs").innerHTML = r.references.length ? "" : '<p class="muted">No references.</p>';
+    r.references.forEach((c) => chunkRow(c, $("refs")));
+    $("retrieved").innerHTML = "";
+    r.retrieved.forEach((c) => chunkRow(c, $("retrieved")));
+  } catch (e) { alert(e.message); }
+  $("ask").disabled = false; $("ask").textContent = "Ask";
+};
+
+loadDocs(); loadSettings();
+</script>
+</body>
+</html>
